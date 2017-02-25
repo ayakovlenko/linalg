@@ -1,38 +1,42 @@
 package linalg
 
+import linalg.implicits._
+
 import scala.collection.immutable.IndexedSeq
 
 case class Vect(iterables: Iterable[Double]) extends IndexedSeq[Double] {
 
   override val seq: IndexedSeq[Double] = iterables.toIndexedSeq
 
+  require(seq.nonEmpty, "vector cannot be empty")
+
   def +(that: Vect): Vect = {
-    require(this.seq.length == that.seq.length, "addition of vectors of different length")
+    require(this.length == that.length, "addition of vectors of different length")
 
     Vect {
-      this.seq zip that.seq map {
+      this zip that map {
         case (a, b) => a + b
       }
     }
   }
 
-  def +(x: Double): Vect = Vect(seq map (_ + x))
+  def +(x: Double): Vect = this + (Vect fill this.size)(x)
 
   def -(that: Vect): Vect = {
-    require(this.seq.length == that.seq.length, "subtraction of vectors of different length")
+    require(this.length == that.length, "subtraction of vectors of different length")
 
     this + (that * -1)
   }
 
   def -(x: Double): Vect = this + -x
 
-  def *(scalar: Double): Vect = Vect(seq map (_ * scalar))
+  def *(scalar: Double): Vect = this * (Vect fill this.length)(scalar)
 
   def *(that: Vect): Vect = {
-    require(this.seq.length == that.seq.length, "multiplication of vectors of different length")
+    require(this.length == that.length, "multiplication of vectors of different length")
 
     Vect {
-      this.seq zip that.seq map {
+      this zip that map {
         case (a, b) => a * b
       }
     }
@@ -42,24 +46,26 @@ case class Vect(iterables: Iterable[Double]) extends IndexedSeq[Double] {
     Vect(seq map (_ / scalar))
   }
 
-  def magnitude: Double = math.sqrt((seq map (x => math.pow(x, 2))).sum)
+  def magnitude: Double = math.sqrt(this dot this)
 
   def unit: Vect = this * (1 / magnitude)
 
-  def dot(that: Vect): Double = (this * that).seq.sum
+  def dot(that: Vect): Double = (this * that).sum
 
   def angle(that: Vect): Double = math.acos {
     (this dot that) / (this.magnitude * that.magnitude)
   }
 
-  def isZero: Boolean = this.seq forall (_ == 0)
+  def isUnit: Boolean = this.magnitude == 1
+
+  def isZero: Boolean = this forall (_ == 0)
 
   def isParallelTo(that: Vect): Boolean = {
-    if (this.isZero || that.isZero) true else (this angle that) ~= (math.Pi, precision)
+    if (this.isZero || that.isZero) true else (this angle that) ~= math.Pi
   }
 
   def isOrthogonalTo(that: Vect): Boolean = {
-    if (this.isZero || that.isZero) true else (this dot that) ~= (0, precision)
+    if (this.isZero || that.isZero) true else (this dot that) ~= 0
   }
 
   /**
@@ -88,15 +94,9 @@ case class Vect(iterables: Iterable[Double]) extends IndexedSeq[Double] {
     )
   }
 
-  override def toString: String = seq.mkString("<[", ", ", "]>")
-
-  private val precision = 1e-12
-
-  private implicit class DoubleLike(x: Double) {
-
-    def ~=(y: Double, precision: Double): Boolean = {
-      (x - y).abs < precision
-    }
+  override def toString: String = {
+    val p = 6
+    seq.map(_ roundedAt p).mkString("[ ", ", ", " ]")
   }
 
   override def length: Int = seq.length
@@ -109,6 +109,8 @@ case class Vect(iterables: Iterable[Double]) extends IndexedSeq[Double] {
 object Vect {
 
   def of(seq: Double*): Vect = Vect(seq)
+
+  def of(range: Range): Vect = Vect(range map (_.toDouble))
 
   def fill(len: Int)(elem: Double): Vect = Vect(1 to len map (_ => elem))
 }
