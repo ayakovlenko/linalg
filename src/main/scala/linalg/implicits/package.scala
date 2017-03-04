@@ -4,7 +4,7 @@ package object implicits {
 
   implicit class DoubleLike(x: Double) {
 
-    private val DOUBLE_PRECISION = 1e-12
+    private val DOUBLE_PRECISION = 1e-10
 
     def ~=(y: Double, precision: Double): Boolean = {
       (x - y).abs < precision
